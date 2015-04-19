@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport"
+        content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+  <title></title>
+
+  <style>
+    .angular-google-map-container {
+      width: 100%;
+      height: 504px;
+    }
+
+    video#bgvid {
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      min-width: 100%;
+      min-height: 100%;
+      width: auto;
+      height: auto;
+      z-index: -100;
+      /*background: url(res/poster.jpg) no-repeat;*/
+      background-size: cover;
+    }
+
+    .bottom-button-bar {
+      position: absolute;
+      bottom: 15px;
+      width: 100%;
+      padding: 1rem;
+      margin: 0 auto;
+    }
+
+    .bottom-button-bar .button:first-child {
+      background-color: #0037B2;
+      color: #eeeeee;
+    }
+
+    .centered {
+      display: block;
+      margin: 0 auto;
+      width: 50%;
+    }
+
+
+  </style>
+
+  <link href="/css/preview-frame.css" rel="stylesheet">
+  <link href="lib/ionic/css/ionic.css" rel="stylesheet">
+
+  <!-- ionic/angularjs js -->
+  <script src="lib/ionic/js/ionic.bundle.js"></script>
+
+  <!-- IF using Sass (run gulp sass first), then uncomment below and remove the CSS includes above
+  <link href="css/ionic.app.css" rel="stylesheet">
+  -->
+
+
+  <script>
+    // Ionic Starter App
+
+    // angular.module is a global place for creating, registering and retrieving Angular modules
+    // 'starter' is the name of this angular module example (also set in a <body> attribute in index.html)
+    // the 2nd parameter is an array of 'requires'
+    // 'starter.services' is found in services.js
+    // 'starter.controllers' is found in controllers.js
+    angular.module('app', ['ionic'])
+
+            .run(function ($ionicPlatform) {
+              $ionicPlatform.ready(function () {
+                // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
+                // for form inputs)
+                if (window.cordova && window.cordova.plugins.Keyboard) {
+                  cordova.plugins.Keyboard.hideKeyboardAccessoryBar(true);
+                }
+                if (window.StatusBar) {
+                  // org.apache.cordova.statusbar required
+                  StatusBar.styleDefault();
+                }
+              });
+            })
+
+            .config(function ($stateProvider, $urlRouterProvider) {
+
+              // Ionic uses AngularUI Router which uses the concept of states
+              // Learn more here: https://github.com/angular-ui/ui-router
+              // Set up the various states which the app can be in.
+              // Each state's controller can be found in controllers.js
+              $stateProvider
+
+                      .state('login', {
+                        url: '/login',
+                        templateUrl: 'page7.html',
+                        controller: function ($scope, $http, $location, $rootScope) {
+                          $scope.user = {};
+                          $scope.login = function () {
+                            $http.post("http://46.101.179.35/banco-alimentos/login", $scope.user)
+                                    .success(function (data) {
+                                      $rootScope.activeId = data.uid;
+                                      $location.path('/banco');
+                                    });
+                          };
+
+                        }
+                      })
+
+                      .state('page8', {
+                        url: '/signup',
+                        templateUrl: 'page8.html',
+                        controller: function ($scope, $http, $location) {
+                          $scope.user = {};
+                          $scope.signup = function () {
+                            console.log($scope.user);
+                            $http.post("http://46.101.179.35/banco-alimentos", $scope.user)
+                                    .success(function () {
+                                      $location.path('/banco');
+                                    });
+                          };
+                        }
+                      })
+
+                      .state('page9', {
+                        url: '/banco',
+                        templateUrl: 'page9.html',
+                        controller: function ($scope, $http, $rootScope) {
+                          $scope.el = {};
+                          $scope.nuevoItem = function () {
+                            $http.post("http://46.101.179.35/demandas/", {
+                              demanda: $scope.el.nuevo,
+                              idBancoAlimentos: $rootScope.activeId
+                            })
+                                    .success(function () {
+                                      $scope.el.nuevo = "";
+                                      $scope.actualizarItems();
+                                    });
+                          };
+                          $scope.actualizarItems = function() {
+                            $http.get("http://46.101.179.35/demandas?idBancoAlimentos=" + $rootScope.activeId)
+                                    .success(function (data) {
+                                      $scope.items = data;
+                                      $scope.$broadcast('scroll.refreshComplete');
+                                    });
+                          };
+                          $scope.actualizaItem = function(item) {
+                            $http.put("http://46.101.179.35/demandas/"+item.id, item);
+                          }
+
+                          $scope.actualizarItems();
+                        }
+                      })
+
+                      .state('page10', {
+                        url: '/donante',
+                        templateUrl: 'page10.html',
+                        controller: function ($scope, $http, $q) {
+                          $http.get("http://46.101.179.35/banco-alimentos").success(function (data) {
+                            var promesas = {};
+                            $scope.bancos = data;
+                            $scope.bancos.forEach(function (banco) {
+                              promesas[banco.id] = $http.get("http://46.101.179.35/demandas?idBancoAlimentos=" + banco.id + "&esNecesario=true");
+                            });
+
+                            promesas = $q.all(promesas);
+
+                            promesas.then(function(respuestas) {
+                              $scope.bancos.map(function(banco) {
+                                return angular.extend(banco, {items: respuestas[banco.id].data});
+                              });
+                            });
+
+                            console.log($scope.bancos);
+                          })
+                        }
+                      })
+
+                      .state('page11', {
+                        url: '/',
+                        templateUrl: 'page11.html',
+                        controller: function () {
+                          document.getElementById("bgvid").defaultPlaybackRate = 0.75;
+                        }
+                      })
+              ;
+
+              // if none of the above states are matched, use this as the fallback
+
+              $urlRouterProvider.otherwise('/');
+
+
+            });
+
+
+  </script>
+</head>
+<body ng-app="app" animation="slide-left-right-ios7">
+<div>
+  <div>
+    <ion-nav-view></ion-nav-view>
+  </div>
+</div>
+<script id="page7.html" type="text/ng-template">
+  <ion-view title="Login">
+    <ion-content padding="true" class="has-header">
+      <form>
+        <ion-list>
+          <label class="item item-input">
+            <span class="input-label">Username</span>
+            <input type="text" ng-model="user.username" placeholder="">
+          </label>
+          <label class="item item-input">
+            <span class="input-label">Password</span>
+            <input type="password" ng-model="user.password" placeholder="">
+          </label>
+        </ion-list>
+        <div class="spacer" style="height: 40px;"></div>
+        <a ng-click="login()" class="button button-stable button-block">Log
+          in</a>
+        <a href="#/signup"
+           class="button button-positive button-clear button-block">Or create an
+          account</a>
+      </form>
+    </ion-content>
+  </ion-view></script>
+<script id="page8.html" type="text/ng-template">
+  <ion-view title="Signup">
+    <ion-content padding="true" scroll="false" class="has-header">
+      <form>
+        <ion-list>
+          <label class="item item-input">
+            <span class="input-label">Name</span>
+            <input type="text" ng-model="user.nombre" placeholder="">
+          </label>
+          <label class="item item-input">
+            <span class="input-label">Username</span>
+            <input type="text" ng-model="user.username" placeholder="">
+          </label>
+          <label class="item item-input">
+            <span class="input-label">Password</span>
+            <input type="text" ng-model="user.password" placeholder="">
+          </label>
+        </ion-list>
+        <a ng-click="signup()" class="button button-stable button-block">Sign
+          up</a>
+      </form>
+    </ion-content>
+  </ion-view></script>
+<script id="page9.html" type="text/ng-template">
+  <ion-view title="Banco de alimentos">
+    <ion-nav-bar>
+      <ion-nav-back-button></ion-nav-back-button>
+    </ion-nav-bar>
+    <ion-content>
+      <ion-refresher
+              pulling-text="Tira para actualizar..."
+              on-refresh="actualizarItems()">
+      </ion-refresher>
+      <ion-list>
+        <ion-toggle toggle-class="toggle-positive" ng-repeat="item in items"
+                    ng-model="item.esNecesario" ng-click="actualizaItem(item)">{{item.demanda}}
+        </ion-toggle>
+      </ion-list>
+      <div class="list card">
+        <div class="item item-divider">Nuevo elemento</div>
+        <div class="item item-body">
+          <ion-list>
+            <label class="item item-input">
+              <span class="input-label">Nombre elemento</span>
+              <input type="text" ng-model="el.nuevo"
+                     placeholder="Nombre elemento">
+            </label>
+          </ion-list>
+          <button class="button button-stable button-block"
+                  ng-click="nuevoItem()">Añadir
+          </button>
+        </div>
+      </div>
+    </ion-content>
+  </ion-view></script>
+<script id="page10.html" type="text/ng-template">
+  <ion-view title="Donante">
+    <ion-nav-bar>
+      <ion-nav-back-button></ion-nav-back-button>
+    </ion-nav-bar>
+    <ion-content padding="true" class="has-header">
+      <button class="button button-light button-block">Geolocalizar</button>
+      <div class="list card" ng-repeat="banco in bancos">
+        <div class="item item-divider">{{banco.ciudad}}</div>
+        <div class="item item-body">
+          <div>
+            <p>El {{banco.nombre}} necesita {{banco.items.length}} cosas:</p>
+
+            <ul>
+              <li ng-repeat="item in banco.items">{{item.demanda}}</li>
+            </ul>
+            <button class="button button-stable button-block"
+                    ng-click="llevame(banco)">¡Llévame!
+            </button>
+          </div>
+        </div>
+      </div>
+    </ion-content>
+  </ion-view></script>
+<script id="page11.html" type="text/ng-template">
+  <ion-view title="Bienvenida">
+    <video autoplay loop poster="res/poster.jpg" id="bgvid">
+      <source src="res/trigo.mp4" type="video/mp4">
+    </video>
+    <ion-content scroll="false" class="has-header">
+      <img class="centered" src="res/logo.png"/>
+
+      <div class="bottom-button-bar">
+        <a href="#/donante" class="button button-block">Donante</a>
+        <a href="#/login" class="button button-block">Banco alimentos</a>
+      </div>
+    </ion-content>
+  </ion-view></script>
+</body>
+</html>
